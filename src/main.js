@@ -17,6 +17,9 @@ const MUSIC_URL =
 const DOOR_SOUND_URL =
   '/audio/puerta-abriendo.mp3'
 
+const GUESTS_URL =
+  '/invitados.json'
+
 const MUSIC_START_TIME = 62
 const MUSIC_VOLUME = 0.45
 const DOOR_SOUND_VOLUME = 0.75
@@ -28,6 +31,9 @@ let activeLayer = 0
 let musicStarted = false
 let musicPlaying = false
 let volumeAnimationId = 0
+
+let guestOverlayVisible = false
+let guestOverlayShown = false
 
 app.innerHTML = `
   <main class="invitation">
@@ -81,6 +87,52 @@ app.innerHTML = `
         aria-hidden="true"
       ></div>
 
+      <section
+        id="guestOverlay"
+        class="guest-overlay hidden"
+        aria-labelledby="guestName"
+        aria-hidden="true"
+      >
+        <article class="guest-card">
+          <div
+            class="guest-card-decoration"
+            aria-hidden="true"
+          >
+            ✦
+          </div>
+
+          <p
+            id="guestLabel"
+            class="guest-label"
+          >
+            Esta invitación es para
+          </p>
+
+          <h2
+            id="guestName"
+            class="guest-name"
+          ></h2>
+
+          <div
+            class="guest-divider"
+            aria-hidden="true"
+          ></div>
+
+          <p
+            id="guestMessage"
+            class="guest-message"
+          ></p>
+
+          <button
+            id="guestContinueButton"
+            class="guest-continue-button"
+            type="button"
+          >
+            Continuar
+          </button>
+        </article>
+      </section>
+
       <audio
         id="weddingMusic"
         src="${MUSIC_URL}"
@@ -111,6 +163,21 @@ const musicIcon =
 
 const actionFeedback =
   document.querySelector('#actionFeedback')
+
+const guestOverlay =
+  document.querySelector('#guestOverlay')
+
+const guestLabel =
+  document.querySelector('#guestLabel')
+
+const guestName =
+  document.querySelector('#guestName')
+
+const guestMessage =
+  document.querySelector('#guestMessage')
+
+const guestContinueButton =
+  document.querySelector('#guestContinueButton')
 
 const weddingMusic =
   document.querySelector('#weddingMusic')
@@ -159,6 +226,204 @@ function applyFrameEffects(layer, frameNumber) {
   }
 }
 
+/* ==================================================
+   SISTEMA DE INVITADOS
+================================================== */
+
+async function loadGuestContext() {
+  const params =
+    new URLSearchParams(window.location.search)
+
+  const requestedId =
+    params.get('id')?.trim().toUpperCase() || ''
+
+  if (!requestedId) {
+    return {
+      status: 'missing',
+      guest: null,
+    }
+  }
+
+  try {
+    const response = await fetch(GUESTS_URL, {
+      cache: 'no-store',
+    })
+
+    if (!response.ok) {
+      throw new Error(
+        `No fue posible cargar ${GUESTS_URL}`,
+      )
+    }
+
+    const guests = await response.json()
+
+    const guest = guests.find(item => {
+      return (
+        String(item.id)
+          .trim()
+          .toUpperCase() === requestedId
+      )
+    })
+
+    if (!guest) {
+      return {
+        status: 'invalid',
+        guest: null,
+      }
+    }
+
+    return {
+      status: 'valid',
+      guest,
+    }
+  } catch (error) {
+    console.error(
+      'No se pudo cargar el listado de invitados:',
+      error,
+    )
+
+    return {
+      status: 'error',
+      guest: null,
+    }
+  }
+}
+
+const guestContextPromise =
+  loadGuestContext()
+
+function fillGuestCard(context) {
+  if (
+    context.status === 'valid' &&
+    context.guest
+  ) {
+    const guest = context.guest
+    const seats = Number(guest.cupos)
+
+    guestLabel.textContent =
+      'Esta invitación es para'
+
+    guestName.textContent =
+      guest.nombre
+
+    guestMessage.textContent =
+      seats === 1
+        ? 'Hemos reservado con mucho cariño 1 lugar para ti.'
+        : `Hemos reservado con mucho cariño ${seats} lugares para ustedes.`
+
+    return
+  }
+
+  if (context.status === 'invalid') {
+    guestLabel.textContent =
+      'No encontramos esta invitación'
+
+    guestName.textContent =
+      'Enlace no identificado'
+
+    guestMessage.textContent =
+      'Verifica que hayas abierto el enlace completo que recibiste.'
+
+    return
+  }
+
+  if (context.status === 'error') {
+    guestLabel.textContent =
+      'Bienvenido a nuestra invitación'
+
+    guestName.textContent =
+      'Aliz & Miguel'
+
+    guestMessage.textContent =
+      'No pudimos cargar temporalmente los datos personalizados, pero puedes continuar.'
+
+    return
+  }
+
+  guestLabel.textContent =
+    'Esta invitación es para'
+
+  guestName.textContent =
+    'Una persona muy especial'
+
+  guestMessage.textContent =
+    'Nos hará muy felices compartir contigo este día tan importante.'
+}
+
+async function showGuestOverlay() {
+  if (guestOverlayShown) return
+
+  guestOverlayShown = true
+
+  const guestContext =
+    await guestContextPromise
+
+  fillGuestCard(guestContext)
+
+  guestOverlay.classList.remove('hidden')
+
+  guestOverlay.setAttribute(
+    'aria-hidden',
+    'false',
+  )
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      guestOverlay.classList.add(
+        'is-visible',
+      )
+
+      guestContinueButton.focus({
+        preventScroll: true,
+      })
+    })
+  })
+
+  guestOverlayVisible = true
+}
+
+/*
+ * Al cerrar la tarjeta personalizada:
+ *
+ * 1. La tarjeta desaparece.
+ * 2. Después pasa del frame 3 al frame 4.
+ */
+async function closeGuestOverlay() {
+  if (
+    !guestOverlayVisible ||
+    isAnimating
+  ) {
+    return
+  }
+
+  isAnimating = true
+  guestOverlayVisible = false
+
+  guestOverlay.classList.remove(
+    'is-visible',
+  )
+
+  guestOverlay.setAttribute(
+    'aria-hidden',
+    'true',
+  )
+
+  await wait(450)
+
+  guestOverlay.classList.add('hidden')
+
+  await transitionToFrame(4, {
+    type: 'cinematic',
+    duration: 5000,
+  })
+
+  isAnimating = false
+}
+
+/* ==================================================
+   MÚSICA
+================================================== */
+
 function updateMusicButton() {
   musicButton.classList.toggle(
     'is-playing',
@@ -181,7 +446,9 @@ async function fadeVolume({
   to,
   duration,
 }) {
-  const animationId = ++volumeAnimationId
+  const animationId =
+    ++volumeAnimationId
+
   const steps = 40
   const interval = duration / steps
   const difference = to - from
@@ -196,11 +463,14 @@ async function fadeVolume({
     step <= steps;
     step += 1
   ) {
-    if (animationId !== volumeAnimationId) {
+    if (
+      animationId !== volumeAnimationId
+    ) {
       return
     }
 
     const progress = step / steps
+
     const nextVolume =
       from + difference * progress
 
@@ -212,7 +482,9 @@ async function fadeVolume({
     await wait(interval)
   }
 
-  if (animationId === volumeAnimationId) {
+  if (
+    animationId === volumeAnimationId
+  ) {
     weddingMusic.volume = Math.max(
       0,
       Math.min(1, to),
@@ -224,7 +496,8 @@ async function startMusic() {
   if (musicStarted) return
 
   weddingMusic.volume = 0
-  weddingMusic.currentTime = MUSIC_START_TIME
+  weddingMusic.currentTime =
+    MUSIC_START_TIME
 
   try {
     await weddingMusic.play()
@@ -233,6 +506,7 @@ async function startMusic() {
       'No se pudo reproducir la música:',
       error,
     )
+
     return
   }
 
@@ -262,7 +536,8 @@ async function pauseMusic() {
   })
 
   weddingMusic.pause()
-  weddingMusic.volume = MUSIC_VOLUME
+  weddingMusic.volume =
+    MUSIC_VOLUME
 }
 
 async function resumeMusic() {
@@ -275,6 +550,7 @@ async function resumeMusic() {
       'No se pudo reanudar la música:',
       error,
     )
+
     return
   }
 
@@ -308,7 +584,8 @@ async function playDoorSound() {
   try {
     doorSound.pause()
     doorSound.currentTime = 0
-    doorSound.volume = DOOR_SOUND_VOLUME
+    doorSound.volume =
+      DOOR_SOUND_VOLUME
 
     await doorSound.play()
   } catch (error) {
@@ -318,6 +595,10 @@ async function playDoorSound() {
     )
   }
 }
+
+/* ==================================================
+   TRANSICIONES
+================================================== */
 
 async function transitionToFrame(
   frameNumber,
@@ -344,11 +625,15 @@ async function transitionToFrame(
       `No se pudo cargar ${nextSrc}`,
       error,
     )
+
     return
   }
 
-  const currentLayer = getActiveLayer()
-  const nextLayer = getNextLayer()
+  const currentLayer =
+    getActiveLayer()
+
+  const nextLayer =
+    getNextLayer()
 
   nextLayer.src = nextSrc
 
@@ -358,7 +643,8 @@ async function transitionToFrame(
   nextLayer.className =
     'frame-layer'
 
-  frameWrapper.dataset.transition = type
+  frameWrapper.dataset.transition =
+    type
 
   frameWrapper.style.setProperty(
     '--transition-duration',
@@ -398,6 +684,10 @@ async function transitionToFrame(
   }
 }
 
+/* ==================================================
+   SECUENCIAS ESPECIALES
+================================================== */
+
 async function removeSeal() {
   if (
     currentFrame !== 1 ||
@@ -428,6 +718,15 @@ async function removeSeal() {
   isAnimating = false
 }
 
+/*
+ * Apertura del sobre:
+ *
+ * 1. Frame 2 → frame 3.
+ * 2. Se detiene en el frame 3.
+ * 3. Aparece la tarjeta personalizada.
+ *
+ * El frame 4 ya no aparece automáticamente.
+ */
 async function openEnvelope() {
   if (
     currentFrame !== 2 ||
@@ -441,13 +740,11 @@ async function openEnvelope() {
   await transitionToFrame(3, {
     type: 'cinematic',
     duration: 5000,
-    pauseAfter: 900,
   })
 
-  await transitionToFrame(4, {
-    type: 'cinematic',
-    duration: 5000,
-  })
+  await wait(700)
+
+  await showGuestOverlay()
 
   isAnimating = false
 }
@@ -462,10 +759,6 @@ async function openDoors() {
 
   isAnimating = true
 
-  /*
-   * El sonido comienza al mismo tiempo
-   * que la transición 7 → 8.
-   */
   playDoorSound()
 
   await transitionToFrame(8, {
@@ -485,6 +778,7 @@ async function openDoors() {
 async function navigateTo(frameNumber) {
   if (
     isAnimating ||
+    guestOverlayVisible ||
     frameNumber < 4 ||
     frameNumber > TOTAL_FRAMES
   ) {
@@ -493,16 +787,24 @@ async function navigateTo(frameNumber) {
 
   isAnimating = true
 
-  await transitionToFrame(frameNumber, {
-    type: 'normal',
-    duration: 180,
-  })
+  await transitionToFrame(
+    frameNumber,
+    {
+      type: 'normal',
+      duration: 180,
+    },
+  )
 
   isAnimating = false
 }
 
+/* ==================================================
+   MAPS Y RSVP
+================================================== */
+
 async function openActionLink(url) {
-  const activeFrameLayer = getActiveLayer()
+  const activeFrameLayer =
+    getActiveLayer()
 
   activeFrameLayer.classList.add(
     'button-press-effect',
@@ -531,6 +833,10 @@ async function openActionLink(url) {
   )
 }
 
+/* ==================================================
+   EVENTOS
+================================================== */
+
 sealButton.addEventListener(
   'click',
   event => {
@@ -544,10 +850,31 @@ musicButton.addEventListener(
   toggleMusic,
 )
 
+guestOverlay.addEventListener(
+  'click',
+  event => {
+    event.stopPropagation()
+    closeGuestOverlay()
+  },
+)
+
+guestContinueButton.addEventListener(
+  'click',
+  event => {
+    event.stopPropagation()
+    closeGuestOverlay()
+  },
+)
+
 frameWrapper.addEventListener(
   'click',
   event => {
-    if (isAnimating) return
+    if (
+      isAnimating ||
+      guestOverlayVisible
+    ) {
+      return
+    }
 
     if (currentFrame === 2) {
       openEnvelope()
@@ -611,6 +938,18 @@ frameWrapper.addEventListener(
 document.addEventListener(
   'keydown',
   event => {
+    if (
+      guestOverlayVisible &&
+      (
+        event.key === 'Enter' ||
+        event.key === 'Escape' ||
+        event.key === 'ArrowRight'
+      )
+    ) {
+      closeGuestOverlay()
+      return
+    }
+
     if (isAnimating) return
 
     if (
@@ -669,6 +1008,7 @@ frameWrapper.addEventListener(
   event => {
     if (
       isAnimating ||
+      guestOverlayVisible ||
       currentFrame < 4
     ) {
       return
