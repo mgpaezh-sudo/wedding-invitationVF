@@ -1,0 +1,497 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  background: #111;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+}
+
+.invitation {
+  width: 100vw;
+  height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: #111;
+  overflow: hidden;
+}
+
+.frame-wrapper {
+  --transition-duration: 400ms;
+
+  position: relative;
+
+  width: min(
+    100vw,
+    calc(100vh * 828 / 1792)
+  );
+
+  height: min(
+    100vh,
+    calc(100vw * 1792 / 828)
+  );
+
+  aspect-ratio: 828 / 1792;
+
+  overflow: hidden;
+  background: #111;
+
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.frame-layer {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  display: block;
+  object-fit: contain;
+
+  opacity: 0;
+  pointer-events: none;
+
+  user-select: none;
+  -webkit-user-drag: none;
+
+  transition:
+    opacity var(--transition-duration) linear,
+    transform var(--transition-duration) ease,
+    filter 120ms ease;
+}
+
+.frame-active {
+  opacity: 1;
+  z-index: 2;
+}
+
+/* Introducción */
+
+.frame-wrapper[data-transition='cinematic']
+.frame-entering {
+  opacity: 1;
+  z-index: 3;
+  transform: none;
+}
+
+.frame-wrapper[data-transition='cinematic']
+.frame-leaving {
+  opacity: 0;
+  z-index: 2;
+  transform: none;
+}
+
+/* Navegación normal */
+
+.frame-wrapper[data-transition='normal']
+.frame-entering {
+  opacity: 1;
+  z-index: 3;
+  transform: translateX(0);
+}
+
+.frame-wrapper[data-transition='normal']
+.frame-leaving {
+  opacity: 0;
+  z-index: 2;
+  transform: translateX(-1%);
+}
+
+/* Puerta */
+
+.frame-wrapper[data-transition='door']
+.frame-entering {
+  opacity: 1;
+  z-index: 3;
+  transform: scale(1);
+}
+
+.frame-wrapper[data-transition='door']
+.frame-leaving {
+  opacity: 0;
+  z-index: 2;
+  transform: scale(1.006);
+}
+
+/* Ken Burns — frame 5 */
+
+.frame-layer.frame-active.landscape-alive {
+  z-index: 2;
+  transform-origin: center 70%;
+
+  animation:
+    kenBurnsFrame5
+    8s
+    ease-in-out
+    2s
+    infinite
+    alternate;
+
+  will-change: transform;
+}
+
+@keyframes kenBurnsFrame5 {
+  0% {
+    transform:
+      scale(1)
+      translate3d(0, 0, 0);
+  }
+
+  45% {
+    transform:
+      scale(1.022)
+      translate3d(-0.35%, -0.65%, 0);
+  }
+
+  100% {
+    transform:
+      scale(1.04)
+      translate3d(-0.8%, -1.35%, 0);
+  }
+}
+
+/* Efecto al tocar Maps o RSVP */
+
+.frame-layer.frame-active.button-press-effect {
+  transform: scale(0.992);
+  filter: brightness(0.97);
+}
+
+.action-feedback {
+  position: absolute;
+  inset: 0;
+
+  z-index: 90;
+
+  pointer-events: none;
+
+  opacity: 0;
+
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(122, 130, 88, 0.11),
+      transparent 45%
+    );
+
+  transition: opacity 120ms ease;
+}
+
+.action-feedback.is-visible {
+  opacity: 1;
+}
+
+/* Sello */
+
+.seal-button {
+  position: absolute;
+
+  left: 50%;
+  top: 52.9%;
+  width: 22%;
+
+  z-index: 80;
+
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+
+  background: transparent;
+  cursor: pointer;
+
+  transform:
+    translate(-50%, -50%);
+
+  filter:
+    drop-shadow(
+      0 7px 10px
+      rgba(0, 0, 0, 0.22)
+    );
+
+  animation:
+    sealBreathing
+    2.8s
+    ease-in-out
+    infinite;
+
+  transition:
+    transform 180ms ease,
+    filter 180ms ease,
+    opacity 450ms ease;
+}
+
+.seal-button::after {
+  content: '';
+
+  position: absolute;
+  inset: 7%;
+
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      115deg,
+      transparent 27%,
+      rgba(255, 255, 255, 0.2) 44%,
+      transparent 61%
+    );
+
+  transform:
+    translateX(-145%)
+    rotate(12deg);
+
+  animation:
+    sealShine
+    4.5s
+    ease-in-out
+    infinite;
+
+  pointer-events: none;
+}
+
+.seal-image {
+  width: 100%;
+  height: auto;
+
+  display: block;
+  border-radius: 50%;
+
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.seal-button:hover {
+  filter:
+    drop-shadow(
+      0 9px 15px
+      rgba(96, 41, 37, 0.38)
+    );
+}
+
+.seal-button:focus-visible {
+  outline:
+    2px solid
+    rgba(96, 41, 37, 0.65);
+
+  outline-offset: 5px;
+}
+
+.seal-button.seal-is-opening {
+  pointer-events: none;
+
+  animation:
+    sealPressAndFall
+    700ms
+    cubic-bezier(
+      0.42,
+      0,
+      0.65,
+      1
+    )
+    forwards;
+}
+
+.seal-button.seal-is-opening::after {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes sealBreathing {
+  0%,
+  100% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  50% {
+    transform:
+      translate(-50%, -50%)
+      scale(1.045);
+  }
+}
+
+@keyframes sealShine {
+  0%,
+  58% {
+    transform:
+      translateX(-145%)
+      rotate(12deg);
+
+    opacity: 0;
+  }
+
+  66% {
+    opacity: 1;
+  }
+
+  82%,
+  100% {
+    transform:
+      translateX(145%)
+      rotate(12deg);
+
+    opacity: 0;
+  }
+}
+
+@keyframes sealPressAndFall {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+
+    opacity: 1;
+  }
+
+  20% {
+    transform:
+      translate(-50%, -47%)
+      scale(0.91)
+      rotate(-3deg);
+
+    opacity: 1;
+  }
+
+  42% {
+    transform:
+      translate(-50%, -52%)
+      scale(1.02)
+      rotate(3deg);
+
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate(-34%, 85%)
+      scale(0.78)
+      rotate(24deg);
+
+    opacity: 0;
+  }
+}
+
+/* Música */
+
+.music-button {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+
+  z-index: 100;
+
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 0;
+
+  border:
+    1px solid
+    rgba(72, 69, 40, 0.3);
+
+  border-radius: 50%;
+
+  background:
+    rgba(245, 241, 232, 0.84);
+
+  color: #484528;
+
+  font-size: 21px;
+  line-height: 1;
+
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+
+  box-shadow:
+    0 4px 14px
+    rgba(0, 0, 0, 0.15);
+
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
+}
+
+.music-button:hover {
+  transform: scale(1.06);
+
+  background:
+    rgba(245, 241, 232, 0.97);
+}
+
+.music-button:active {
+  transform: scale(0.95);
+}
+
+.music-button.is-playing span {
+  animation:
+    musicPulse
+    1.8s
+    ease-in-out
+    infinite;
+}
+
+.music-button.hidden,
+.seal-button.hidden {
+  display: none;
+}
+
+@keyframes musicPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@media (max-width: 480px) {
+  .music-button {
+    top: 14px;
+    right: 14px;
+
+    width: 40px;
+    height: 40px;
+
+    font-size: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame-layer {
+    transition-duration: 100ms !important;
+    transform: none !important;
+  }
+
+  .frame-layer.landscape-alive,
+  .seal-button,
+  .seal-button::after,
+  .music-button.is-playing span {
+    animation: none;
+  }
+}
