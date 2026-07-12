@@ -495,7 +495,7 @@ async function navigateTo(frameNumber) {
 
   await transitionToFrame(frameNumber, {
     type: 'normal',
-    duration: 380,
+    duration: 180,
   })
 
   isAnimating = false
@@ -512,13 +512,13 @@ async function openActionLink(url) {
     'is-visible',
   )
 
-  await wait(120)
+  await wait(50)
 
   activeFrameLayer.classList.remove(
     'button-press-effect',
   )
 
-  await wait(80)
+  await wait(20)
 
   actionFeedback.classList.remove(
     'is-visible',
