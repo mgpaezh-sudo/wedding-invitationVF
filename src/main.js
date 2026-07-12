@@ -8,8 +8,11 @@ const LANDSCAPE_FRAMES = new Set([5])
 const MAPS_URL =
   'https://maps.app.goo.gl/tLGUkPLRWXy5AUfw7'
 
-const RSVP_URL =
-  'https://docs.google.com/forms/d/e/1FAIpQLSeArn4u1RT8R6CqsoE412LRTDwCetuoo4NCfj0W9Ew3gFSMXQ/viewform?usp=sharing&ouid=105239047434182274287'
+const RSVP_BASE_URL =
+  'https://docs.google.com/forms/d/e/1FAIpQLSeArn4u1RT8R6CqsoE412LRTDwCetuoo4NCfj0W9Ew3gFSMXQ/viewform?usp=pp_url'
+
+const RSVP_NAME_FIELD =
+  'entry.1760424736'
 
 const MUSIC_URL =
   '/audio/a-thousand-years.mp3'
@@ -34,6 +37,7 @@ let volumeAnimationId = 0
 
 let guestOverlayVisible = false
 let guestOverlayShown = false
+let currentGuestContext = null
 
 app.innerHTML = `
   <main class="invitation">
@@ -290,7 +294,10 @@ async function loadGuestContext() {
 }
 
 const guestContextPromise =
-  loadGuestContext()
+  loadGuestContext().then(context => {
+    currentGuestContext = context
+    return context
+  })
 
 function fillGuestCard(context) {
   if (
@@ -382,12 +389,6 @@ async function showGuestOverlay() {
   guestOverlayVisible = true
 }
 
-/*
- * Al cerrar la tarjeta personalizada:
- *
- * 1. La tarjeta desaparece.
- * 2. Después pasa del frame 3 al frame 4.
- */
 async function closeGuestOverlay() {
   if (
     !guestOverlayVisible ||
@@ -418,6 +419,26 @@ async function closeGuestOverlay() {
   })
 
   isAnimating = false
+}
+
+/*
+ * Genera el enlace de Google Forms con el nombre
+ * del invitado prellenado.
+ */
+function buildRsvpUrl() {
+  const url = new URL(RSVP_BASE_URL)
+
+  if (
+    currentGuestContext?.status === 'valid' &&
+    currentGuestContext.guest?.nombre
+  ) {
+    url.searchParams.set(
+      RSVP_NAME_FIELD,
+      currentGuestContext.guest.nombre,
+    )
+  }
+
+  return url.toString()
 }
 
 /* ==================================================
@@ -718,15 +739,6 @@ async function removeSeal() {
   isAnimating = false
 }
 
-/*
- * Apertura del sobre:
- *
- * 1. Frame 2 → frame 3.
- * 2. Se detiene en el frame 3.
- * 3. Aparece la tarjeta personalizada.
- *
- * El frame 4 ya no aparece automáticamente.
- */
 async function openEnvelope() {
   if (
     currentFrame !== 2 ||
@@ -920,7 +932,10 @@ frameWrapper.addEventListener(
       relativeY >= 0.57 &&
       relativeY <= 0.73
     ) {
-      openActionLink(RSVP_URL)
+      openActionLink(
+        buildRsvpUrl(),
+      )
+
       return
     }
 
