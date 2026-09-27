@@ -358,5 +358,20 @@
     "id": "F072",
     "nombre": "Daniel",
     "cupos": 1
+  },
+   {
+    "id": "F073",
+    "nombre": "Juan Dediego",
+    "cupos": 1
+  },
+   {
+    "id": "F074",
+    "nombre": "Mauricio Sabogal",
+    "cupos": 1
+  },
+   {
+    "id": "F073",
+    "nombre": "Sofia y Felipe",
+    "cupos": 2
   }
 ]
