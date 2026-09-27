@@ -370,8 +370,18 @@
     "cupos": 1
   },
    {
-    "id": "F073",
+    "id": "F075",
     "nombre": "Sofia y Felipe",
     "cupos": 2
+  },
+   {
+    "id": "F076",
+    "nombre": "César Martinez",
+    "cupos": 1
+  },
+    {
+    "id": "F077",
+    "nombre": "Jhonny Quintero",
+    "cupos": 1
   }
 ]
